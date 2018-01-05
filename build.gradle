@@ -39,7 +39,9 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compileOnly 'org.bukkit:bukkit:1.12.2-R0.1-SNAPSHOT'
+    compileOnly ('org.bukkit:bukkit:1.12.2-R0.1-SNAPSHOT') {
+        exclude group: 'junit', module: 'junit'
+    }
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }
 
@@ -59,4 +61,42 @@ processResources {
     filter ReplaceTokens, tokens: [
             "plugin_version": project.property("plugin_version").toString()
     ]
+}
+
+ext.moduleName = 'com.dumptruckman.mcrepl'
+
+compileJava {
+    dependsOn(':compileKotlin')
+    doFirst {
+        options.compilerArgs = [
+                '--module-path', classpath.asPath,
+        ]
+        classpath = files()
+    }
+}
+
+compileTestJava {
+    inputs.property("moduleName", moduleName)
+    doFirst {
+        options.compilerArgs = [
+                '--module-path', classpath.asPath,
+                '--add-modules', 'junit',
+                '--add-reads', "$moduleName=junit",
+                '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
+        ]
+        classpath = files()
+    }
+}
+
+test {
+    inputs.property("moduleName", moduleName)
+    doFirst {
+        jvmArgs = [
+                '--module-path', classpath.asPath,
+                '--add-modules', 'ALL-MODULE-PATH',
+                '--add-reads', "$moduleName=junit",
+                '--patch-module', "$moduleName=" + files(sourceSets.test.java.outputDir).asPath,
+        ]
+        classpath = files()
+    }
 }
