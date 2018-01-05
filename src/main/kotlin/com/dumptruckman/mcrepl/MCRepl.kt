@@ -67,6 +67,7 @@ class MCRepl : JavaPlugin(), Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     private fun onPlayerChatLowest(event: AsyncPlayerChatEvent) {
         val shellThread = activeShells[event.player]
+        println(shellThread)
         if (shellThread == null) return
 
         var message = event.message
@@ -75,11 +76,16 @@ class MCRepl : JavaPlugin(), Listener {
         }
         shellThread.messageInputStream.addMessage(message)
         event.isCancelled = true
+        event.player.sendMessage("mcrepl>" + message)
+//        if (message.startsWith("#exit", true)) {
+//            endRepl(event.player)
+//        }
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     private fun onPlayerChatHighest(event: AsyncPlayerChatEvent) {
         // Remove chat messages from being sent to players that have a REPL open
+        // Unless it is the sending player
         val recipients = event.recipients.iterator()
         while (recipients.hasNext()) {
             val recipient = recipients.next()
