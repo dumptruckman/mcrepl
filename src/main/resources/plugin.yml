@@ -1,0 +1,12 @@
+name: MCRepl
+main: com.dumptruckman.mcrepl.MCRepl
+version: plugin_version
+
+commands:
+  repl:
+    description: Starts a Java REPL instance
+    permission: mcrepl.repl
+
+permissions:
+  mcrepl.repl:
+    default: op
