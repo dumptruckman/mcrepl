@@ -3,4 +3,5 @@ module com.dumptruckman.mcrepl {
     requires bukkit;
     requires kotlin.stdlib;
     requires java.logging;
+    requires bsh;
 }
