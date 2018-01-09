@@ -2,7 +2,6 @@ package com.dumptruckman.mcrepl
 
 import jdk.jshell.tool.JavaShellToolBuilder
 import org.bukkit.command.CommandSender
-import java.io.PrintStream
 
 internal class JShellThread(private val mcRepl: MCRepl, private val user: CommandSender) : Thread() {
 
@@ -13,7 +12,10 @@ internal class JShellThread(private val mcRepl: MCRepl, private val user: Comman
     }
 
     override fun run() {
-        JavaShellToolBuilder.builder().`in`(messageInputStream, null).out(MessagePrintStream(user)).run()
+        JavaShellToolBuilder.builder()
+                .`in`(messageInputStream, null)
+                .out(MessagePrintStream(user))
+                .run("-execution", "local")
         messageInputStream.close()
         mcRepl.endRepl(user)
     }
