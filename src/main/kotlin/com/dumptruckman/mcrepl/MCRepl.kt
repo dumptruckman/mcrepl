@@ -50,6 +50,7 @@ class MCRepl : JavaPlugin(), Listener {
         val shellThread = activeShells[user]
         if (shellThread == null) return
 
+        activeShells.remove(user)
         logger.info("Ended REPL for " + user)
     }
 
