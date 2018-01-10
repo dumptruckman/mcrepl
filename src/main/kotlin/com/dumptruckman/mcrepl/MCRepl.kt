@@ -9,14 +9,13 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.player.AsyncPlayerChatEvent
-import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.concurrent.ConcurrentHashMap
 
 class MCRepl : JavaPlugin(), Listener {
 
-    private val activeShells: MutableMap<CommandSender, JShellThread> = ConcurrentHashMap()
+    private val activeShells: MutableMap<CommandSender, JShellEvaluator> = ConcurrentHashMap()
 
     override fun onEnable() {
         server.pluginManager.registerEvents(this, this)
@@ -38,48 +37,52 @@ class MCRepl : JavaPlugin(), Listener {
     fun startRepl(user: CommandSender) {
         if (activeShells.containsKey(user)) return
 
-        val shellThread = JShellThread(this, user)
-        activeShells[user] = shellThread
+        activeShells[user] = JShellEvaluator()
 
-        user.sendMessage("You will not see chat messages while using the REPL.\n" +
-                "All REPL commands should start with # instead of /.\n" +
-                "Type #exit to quit the REPL at any time.")
-        shellThread.start()
+        user.sendMessage("${ChatColor.GRAY}|  You will not see chat messages while using the REPL.\n" +
+                "|  Type #exit to quit the REPL at any time.")
+
         logger.info("Started REPL for $user")
     }
 
     internal fun endRepl(user: CommandSender) {
-        val shellThread = activeShells[user]
-        if (shellThread == null) return
-
-        activeShells.remove(user)
-        logger.info("Ended REPL for $user")
+        val shell = activeShells.remove(user)
+        if (shell != null) {
+            shell.close()
+            user.sendMessage("${ChatColor.GRAY}|  Goodbye!")
+            logger.info("Ended REPL for $user")
+        }
     }
 
     @EventHandler
     private fun onPlayerQuit(event: PlayerQuitEvent) {
-        val shellThread = activeShells[event.player] ?: return
-
-        shellThread.stop()
-        shellThread.messageInputStream.close()
         endRepl(event.player)
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     private fun onPlayerChatLowest(event: AsyncPlayerChatEvent) {
-        val shellThread = activeShells[event.player]
-        if (shellThread == null) return
+        val shell = activeShells[event.player] ?: return
 
-        var message = event.message
-        if (message.startsWith("#")) {
-            message = message.replaceFirst('#', '/')
-        }
-        shellThread.messageInputStream.addMessage(message)
         event.isCancelled = true
-        event.player.sendMessage("${ChatColor.AQUA}mcrepl> ${ChatColor.RESET}$message")
-//        if (message.startsWith("#exit", true)) {
-//            endRepl(event.player)
-//        }
+
+        val message = event.message
+
+        if (shell.isHoldingIncompleteScript()) {
+            event.player.sendMessage("${ChatColor.AQUA}...> ${ChatColor.RESET}$message")
+        } else {
+            event.player.sendMessage("${ChatColor.AQUA}mcrepl> ${ChatColor.RESET}$message")
+        }
+
+        if (message.startsWith("#exit")) {
+            endRepl(event.player)
+        } else {
+            Bukkit.getScheduler().runTask(this, {
+                val result = shell.eval(message)
+                if (result != null) {
+                    event.player.sendMessage("${ChatColor.GRAY}$result")
+                }
+            })
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
