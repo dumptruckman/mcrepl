@@ -76,7 +76,7 @@ class MCRepl : JavaPlugin(), Listener {
         }
         shellThread.messageInputStream.addMessage(message)
         event.isCancelled = true
-        event.player.sendMessage("${ChatColor.AQUA}mcrepl>${ChatColor.RESET}$message")
+        event.player.sendMessage("${ChatColor.AQUA}mcrepl> ${ChatColor.RESET}$message")
 //        if (message.startsWith("#exit", true)) {
 //            endRepl(event.player)
 //        }
