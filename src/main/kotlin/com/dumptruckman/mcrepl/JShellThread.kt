@@ -3,7 +3,7 @@ package com.dumptruckman.mcrepl
 import jdk.jshell.tool.JavaShellToolBuilder
 import org.bukkit.command.CommandSender
 
-internal class JShellThread(private val mcRepl: MCRepl, private val user: CommandSender) : Thread() {
+internal class JShellThread(private val mcRepl: MCRepl, private val user: CommandSender) : Thread("mcrepl-${user.name}") {
 
     val messageInputStream = ConversationInputStream()
 

@@ -10,6 +10,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.player.AsyncPlayerChatEvent
 import org.bukkit.event.player.PlayerJoinEvent
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.concurrent.ConcurrentHashMap
 
@@ -56,14 +57,12 @@ class MCRepl : JavaPlugin(), Listener {
     }
 
     @EventHandler
-    private fun onPlayerJoin(event: PlayerJoinEvent) {
-        if (activeShells.containsKey(event.player)) {
-            Bukkit.getScheduler().runTask(this, {
-                event.player.sendMessage("You will not see chat messages while using the REPL.\n" +
-                        "All REPL commands should start with # instead of /.\n" +
-                        "Type #exit to quit the REPL at any time.")
-            })
-        }
+    private fun onPlayerQuit(event: PlayerQuitEvent) {
+        val shellThread = activeShells[event.player] ?: return
+
+        shellThread.stop()
+        shellThread.messageInputStream.close()
+        endRepl(event.player)
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
