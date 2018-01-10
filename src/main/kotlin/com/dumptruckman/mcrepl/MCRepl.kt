@@ -1,6 +1,7 @@
 package com.dumptruckman.mcrepl
 
 import org.bukkit.Bukkit
+import org.bukkit.ChatColor
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
@@ -43,7 +44,7 @@ class MCRepl : JavaPlugin(), Listener {
                 "All REPL commands should start with # instead of /.\n" +
                 "Type #exit to quit the REPL at any time.")
         shellThread.start()
-        logger.info("Started REPL for " + user)
+        logger.info("Started REPL for $user")
     }
 
     internal fun endRepl(user: CommandSender) {
@@ -51,7 +52,7 @@ class MCRepl : JavaPlugin(), Listener {
         if (shellThread == null) return
 
         activeShells.remove(user)
-        logger.info("Ended REPL for " + user)
+        logger.info("Ended REPL for $user")
     }
 
     @EventHandler
@@ -68,7 +69,6 @@ class MCRepl : JavaPlugin(), Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     private fun onPlayerChatLowest(event: AsyncPlayerChatEvent) {
         val shellThread = activeShells[event.player]
-        println(shellThread)
         if (shellThread == null) return
 
         var message = event.message
@@ -77,7 +77,7 @@ class MCRepl : JavaPlugin(), Listener {
         }
         shellThread.messageInputStream.addMessage(message)
         event.isCancelled = true
-        event.player.sendMessage("mcrepl>" + message)
+        event.player.sendMessage("${ChatColor.AQUA}mcrepl>${ChatColor.RESET}$message")
 //        if (message.startsWith("#exit", true)) {
 //            endRepl(event.player)
 //        }

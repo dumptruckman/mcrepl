@@ -16,14 +16,15 @@ internal class ConversationInputStream : InputStream() {
     private val restStop = java.lang.Object()
 
     override fun read(): Int {
+        streamLock.lock()
         if (messageCharsQueue.isNotEmpty()) {
+            streamLock.unlock()
             return immediateRead()
         } else {
-            println("Waiting on user input")
+            streamLock.unlock()
             synchronized(restStop) {
                 restStop.wait()
             }
-            println("User input should be received")
             restLock.lock()
             restLock.unlock()
             if (open) {
@@ -36,15 +37,13 @@ internal class ConversationInputStream : InputStream() {
 
     private fun immediateRead(): Int {
         streamLock.lock()
-        val char = messageCharsQueue.poll()
+        val char = messageCharsQueue.poll() ?: throw IllegalStateException("Message queue is empty!")
         val result = char.toInt()
-        println("Read char '$char' as '$result'")
         streamLock.unlock()
         return result;
     }
 
     fun addMessage(message: String) {
-        println("Adding user input: $message")
         restLock.lock()
         synchronized(restStop) {
             restStop.notify()
@@ -52,12 +51,10 @@ internal class ConversationInputStream : InputStream() {
         streamLock.lock()
         restLock.unlock()
         (message + System.getProperty("line.separator")).toCharArray().forEach { messageCharsQueue.add(it) }
-        println("Added user input")
         streamLock.unlock()
     }
 
     override fun close() {
-        println("Closing inputstream")
         restLock.lock()
         synchronized(restStop) {
             restStop.notify()
