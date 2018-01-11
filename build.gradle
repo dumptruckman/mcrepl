@@ -3,7 +3,7 @@ import org.apache.tools.ant.filters.*
 buildscript {
     ext {
         kotlin_version = '1.2.10'
-        plugin_version = '1.0-SNAPSHOT'
+        plugin_version = '1.0-beta'
     }
 
     repositories {

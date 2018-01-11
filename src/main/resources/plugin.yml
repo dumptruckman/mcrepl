@@ -5,7 +5,7 @@ version: @plugin_version@
 commands:
   mcrepl:
     description: Starts a Java REPL instance
-    permission: mcrepl.repl
+    permission: mcrepl.use
 
 permissions:
   mcrepl.use:
