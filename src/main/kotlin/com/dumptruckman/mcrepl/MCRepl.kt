@@ -4,6 +4,8 @@ import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
+import org.bukkit.command.ConsoleCommandSender
+import org.bukkit.conversations.Conversable
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -15,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class MCRepl : JavaPlugin(), Listener {
 
-    private val activeShells: MutableMap<CommandSender, JShellEvaluator> = ConcurrentHashMap()
+    private val activeShells: MutableMap<CommandSender, ReplSession<*>> = ConcurrentHashMap()
 
     override fun onEnable() {
         server.pluginManager.registerEvents(this, this)
@@ -27,29 +29,27 @@ class MCRepl : JavaPlugin(), Listener {
         } else {
             if (sender is Player) {
                 startRepl(sender)
+            } else if (sender is ConsoleCommandSender) {
+                startRepl(sender)
             } else {
-                sender.sendMessage("Only in game players may start a REPL instance.")
+                sender.sendMessage("Only in game players and console may start a REPL instance.")
             }
         }
         return true
     }
 
-    fun startRepl(user: CommandSender) {
+    fun <User>startRepl(user: User) where User : CommandSender, User : Conversable {
         if (activeShells.containsKey(user)) return
 
-        activeShells[user] = JShellEvaluator()
-
-        user.sendMessage("${ChatColor.GRAY}|  You will not see chat messages while using the REPL.\n" +
-                "|  Type #exit to quit the REPL at any time.")
+        activeShells[user] = ReplSession.startSession(this, user)
 
         logger.info("Started REPL for $user")
     }
 
     internal fun endRepl(user: CommandSender) {
-        val shell = activeShells.remove(user)
-        if (shell != null) {
-            shell.close()
-            user.sendMessage("${ChatColor.GRAY}|  Goodbye!")
+        val session = activeShells.remove(user)
+        if (session != null) {
+            session.endSession()
             logger.info("Ended REPL for $user")
         }
     }
@@ -57,44 +57,5 @@ class MCRepl : JavaPlugin(), Listener {
     @EventHandler
     private fun onPlayerQuit(event: PlayerQuitEvent) {
         endRepl(event.player)
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST)
-    private fun onPlayerChatLowest(event: AsyncPlayerChatEvent) {
-        val shell = activeShells[event.player] ?: return
-
-        event.isCancelled = true
-
-        val message = event.message
-
-        if (shell.isHoldingIncompleteScript()) {
-            event.player.sendMessage("${ChatColor.AQUA}...> ${ChatColor.RESET}$message")
-        } else {
-            event.player.sendMessage("${ChatColor.AQUA}mcrepl> ${ChatColor.RESET}$message")
-        }
-
-        if (message.startsWith("#exit")) {
-            endRepl(event.player)
-        } else {
-            Bukkit.getScheduler().runTask(this, {
-                val result = shell.eval(message)
-                if (result != null) {
-                    event.player.sendMessage("${ChatColor.GRAY}$result")
-                }
-            })
-        }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    private fun onPlayerChatHighest(event: AsyncPlayerChatEvent) {
-        // Remove chat messages from being sent to players that have a REPL open
-        // Unless it is the sending player
-        val recipients = event.recipients.iterator()
-        while (recipients.hasNext()) {
-            val recipient = recipients.next()
-            if (activeShells.containsKey(recipient)) {
-                recipients.remove()
-            }
-        }
     }
 }
