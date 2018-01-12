@@ -17,7 +17,8 @@ class ReplSession private constructor (private val plugin: MCRepl, val user: Con
 
     init {
         val conversationFactory = ConversationFactory(plugin).withFirstPrompt(
-                ReplPrompt("${ChatColor.GRAY}|  You will not see chat messages while using the REPL.\n" +
+                ReplPrompt((if (user is ConsoleCommandSender) "\n" else "") +
+                        "${ChatColor.GRAY}|  You will not see chat messages while using the REPL.\n" +
                         "|  Type #exit to quit the REPL at any time.")).withLocalEcho(false)
         if (user is Permissible) {
             conversationFactory.withModality(user.hasPermission("mcrepl.modal"))
