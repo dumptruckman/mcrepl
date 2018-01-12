@@ -1,7 +1,6 @@
 package com.dumptruckman.mcrepl
 
 import org.bukkit.ChatColor
-import org.bukkit.command.CommandSender
 import org.bukkit.command.ConsoleCommandSender
 import org.bukkit.conversations.Conversable
 import org.bukkit.conversations.Conversation
@@ -9,33 +8,34 @@ import org.bukkit.conversations.ConversationContext
 import org.bukkit.conversations.ConversationFactory
 import org.bukkit.conversations.Prompt
 import org.bukkit.conversations.StringPrompt
+import org.bukkit.permissions.Permissible
 
-class ReplSession<User> private constructor (private val plugin: MCRepl, val user: User)
-        where User : CommandSender, User : Conversable {
+class ReplSession private constructor (private val plugin: MCRepl, val user: Conversable) {
 
     private val shell = JShellEvaluator()
     private val conversation: Conversation
 
     init {
-        conversation = ConversationFactory(plugin).withFirstPrompt(
+        val conversationFactory = ConversationFactory(plugin).withFirstPrompt(
                 ReplPrompt("${ChatColor.GRAY}|  You will not see chat messages while using the REPL.\n" +
-                        "|  Type #exit to quit the REPL at any time."))
-                .withModality(user.hasPermission("mcrepl.modal"))
-                .withLocalEcho(false)
-                .buildConversation(user)
+                        "|  Type #exit to quit the REPL at any time.")).withLocalEcho(false)
+        if (user is Permissible) {
+            conversationFactory.withModality(user.hasPermission("mcrepl.modal"))
+        }
+        conversation = conversationFactory.buildConversation(user)
         conversation.begin()
     }
 
     fun endSession() {
         conversation.abandon()
         shell.close()
-        user.sendMessage("${ChatColor.GRAY}|  Goodbye!")
+        user.sendRawMessage("${ChatColor.GRAY}|  Goodbye!")
     }
 
     companion object {
 
         @JvmStatic
-        fun <User>startSession(plugin: MCRepl, user: User): ReplSession<User> where User : CommandSender, User : Conversable {
+        fun startSession(plugin: MCRepl, user: Conversable): ReplSession {
             return ReplSession(plugin, user)
         }
     }
